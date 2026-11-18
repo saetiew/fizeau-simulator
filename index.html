@@ -1,0 +1,624 @@
+<title>Fizeau Bench 2″</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: optical-bench console. Controls rail on the left, to-scale bench drawing on top, camera + numbers + phase-shift results below. */
+:root{
+  --bg:#edf1f4; --panel:#ffffff; --panel2:#f5f7f9; --ink:#17212a; --muted:#5a6873; --line:#d2dae1;
+  --laser:#d62a20; --laser-soft:rgba(214,42,32,.16); --laser-mid:rgba(214,42,32,.34);
+  --ret:#2c6aa8; --ret-soft:rgba(44,106,168,.22);
+  --glass:#9cc3d3; --glass-edge:#4f8195; --metal:#8a96a0;
+  --ok:#24734a; --ok-bg:#dff1e6; --warn:#9a5b00; --warn-bg:#fbedd5; --bad:#b0241b; --bad-bg:#f9dedb;
+  --map-neg:#2f5fa7; --map-mid:#f3f4f2; --map-pos:#c23a2b;
+  --f-body:"IBM Plex Sans Thai", "Leelawadee UI", Tahoma, system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151a; --panel:#172028; --panel2:#1d2832; --ink:#e2e9ee; --muted:#93a3af; --line:#2a3743;
+  --laser:#ff5145; --laser-soft:rgba(255,81,69,.16); --laser-mid:rgba(255,81,69,.36);
+  --ret:#6aa9ea; --ret-soft:rgba(106,169,234,.24);
+  --glass:#3d6576; --glass-edge:#7fb3c7; --metal:#6c7984;
+  --ok:#6fd39b; --ok-bg:#16352a; --warn:#f0b459; --warn-bg:#3a2c12; --bad:#ff8a80; --bad-bg:#3e1c1a;
+  --map-neg:#5b8fe0; --map-mid:#1e262d; --map-pos:#ec6a55; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f151a; --panel:#172028; --panel2:#1d2832; --ink:#e2e9ee; --muted:#93a3af; --line:#2a3743;
+  --laser:#ff5145; --laser-soft:rgba(255,81,69,.16); --laser-mid:rgba(255,81,69,.36);
+  --ret:#6aa9ea; --ret-soft:rgba(106,169,234,.24);
+  --glass:#3d6576; --glass-edge:#7fb3c7; --metal:#6c7984;
+  --ok:#6fd39b; --ok-bg:#16352a; --warn:#f0b459; --warn-bg:#3a2c12; --bad:#ff8a80; --bad-bg:#3e1c1a;
+  --map-neg:#5b8fe0; --map-mid:#1e262d; --map-pos:#ec6a55; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+h1,h2,h3{text-wrap:balance;margin:0;font-weight:600}
+h1{font-size:22px;letter-spacing:-.01em}
+h2{font-size:16px}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.mono,output,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:14px}
+header.top p{margin:0;color:var(--muted);max-width:70ch}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:920px){.layout{grid-template-columns:minmax(0,1fr)}}
+aside.controls{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:16px;
+  position:sticky;top:env(safe-area-inset-top,0px);max-height:calc(100vh - 24px);overflow:auto}
+@media (max-width:920px){aside.controls{position:static;max-height:none}}
+.grp{display:flex;flex-direction:column;gap:10px}
+.ctl{display:flex;flex-direction:column;gap:3px}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.ctl output{color:var(--laser);font-size:12px;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--laser)}
+select,input[type=number]{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--ink);width:100%}
+input[type=number]{font-family:var(--f-mono)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font:inherit;font-family:var(--f-mono);font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--laser);border-color:var(--laser);color:#fff}
+.chip:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--ret);outline-offset:2px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px}
+.check input{margin-top:4px;accent-color:var(--laser)}
+main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 14px;margin-bottom:10px}
+.card-head p{margin:0;color:var(--muted);font-size:12.5px}
+.summary{display:flex;flex-wrap:wrap;gap:8px 22px;margin-bottom:10px}
+.summary div{display:flex;flex-direction:column}
+.summary span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.summary b{font-family:var(--f-mono);font-size:19px;font-weight:500}
+.diag-wrap{overflow-x:auto;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+#diagram{display:block;width:100%;min-width:680px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:18px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.two{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:16px}
+@media (max-width:760px){.two{grid-template-columns:minmax(0,1fr)}}
+.cam{display:flex;flex-direction:column;gap:8px}
+.cam canvas{width:100%;max-width:360px;aspect-ratio:1;border-radius:8px;background:#000;image-rendering:auto}
+#profile{width:100%;max-width:360px;height:110px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+button.btn{font:inherit;font-size:13px;padding:6px 12px;border-radius:7px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.metrics{display:grid;grid-template-columns:minmax(0,1fr);gap:0;font-size:13px}
+.m{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto;gap:4px 10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)}
+.m:last-child{border-bottom:0}
+.m .k{min-width:0}
+.m .k small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.m .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.pill{font-size:11px;padding:1px 8px;border-radius:999px;white-space:nowrap;text-align:center;min-width:52px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.info{background:var(--panel2);color:var(--muted)}
+.frames{display:flex;flex-wrap:wrap;gap:8px}
+.frames figure{margin:0;display:flex;flex-direction:column;gap:2px;align-items:center;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.frames canvas{width:72px;height:72px;border-radius:6px;background:#000}
+.maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:12px}
+.map{display:flex;flex-direction:column;gap:6px}
+.map canvas{width:100%;max-width:280px;aspect-ratio:1;border-radius:8px;background:var(--panel2)}
+.map .cbar{height:8px;max-width:280px;border-radius:4px}
+.map .scale{display:flex;justify-content:space-between;max-width:280px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.stat{font-family:var(--f-mono);font-size:12.5px}
+.note{font-size:12.5px;color:var(--muted);margin:10px 0 0;max-width:80ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <h1>Fizeau Bench 2″</h1>
+  <p>จำลองระบบ เลเซอร์ HeNe → L1 + pinhole → BS → L2 → WW42012-A → ชิ้นงาน ปรับค่าทางซ้ายแล้วดูแผนผังที่วาดตามสเกลจริง ภาพริ้วที่กล้อง และผลวัดแบบ phase-shifting</p>
+</header>
+
+<div class="layout">
+<aside class="controls" aria-label="ตัวปรับค่า">
+  <div class="grp" id="grp-laser"><h3>เลเซอร์ (632.8 nm)</h3></div>
+  <div class="grp" id="grp-lens">
+    <h3>เลนส์ขยายบีม</h3>
+    <div class="ctl">
+      <label for="f1">L1 ความยาวโฟกัส f1 <output id="f1_o"></output></label>
+      <input type="number" id="f1" min="1" max="50" step="0.01" value="4.51">
+      <div class="chips" data-for="f1"></div>
+    </div>
+    <div class="ctl">
+      <label for="f2">L2 ความยาวโฟกัส f2 (Ø2″) <output id="f2_o"></output></label>
+      <input type="number" id="f2" min="100" max="1000" step="1" value="400">
+      <div class="chips" data-for="f2"></div>
+    </div>
+  </div>
+  <div class="grp" id="grp-cav">
+    <h3>กระจกอ้างอิงและช่องว่าง</h3>
+    <div class="ctl">
+      <label for="refType">กระจกอ้างอิง</label>
+      <select id="refType">
+        <option value="ar">WW42012-A (เคลือบ AR, R ≈ 0.5%)</option>
+        <option value="bare">WW42012 (ไม่เคลือบ, R ≈ 3.5%)</option>
+      </select>
+    </div>
+    <label class="check"><input type="checkbox" id="refErr" checked><span>รวมความไม่เรียบของผิวอ้างอิง (≈ λ/10 PV ตามสเปก)</span></label>
+    <label class="check"><input type="checkbox" id="iris" checked><span>ใช้ iris ที่จุดโฟกัสขากลับ บังแสงสะท้อนจากผิวหน้า WW</span></label>
+  </div>
+  <div class="grp" id="grp-sample">
+    <h3>ชิ้นงาน</h3>
+    <div class="ctl">
+      <label for="sampleType">ชนิดผิวชิ้นงาน</label>
+      <select id="sampleType">
+        <option value="glass">แก้ว BK7 ไม่เคลือบ (R ≈ 4.2%)</option>
+        <option value="al">กระจกเงาอะลูมิเนียม (R ≈ 91%)</option>
+        <option value="ag">กระจกเงาเงิน (R ≈ 97%)</option>
+        <option value="si">แผ่นซิลิคอน (R ≈ 35%)</option>
+      </select>
+    </div>
+  </div>
+  <div class="grp" id="grp-cam">
+    <h3>กล้องและการวัดเฟส</h3>
+    <div class="ctl">
+      <label for="algo">วิธีถอดเฟส</label>
+      <select id="algo">
+        <option value="h5">Hariharan 5 ภาพ (ทนความคลาด PZT)</option>
+        <option value="s4">4 ภาพ (ขั้นละ 90°)</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn ghost" id="reset" type="button">คืนค่าเริ่มต้น</button>
+</aside>
+
+<main>
+  <section class="card" aria-labelledby="h-diag">
+    <div class="card-head">
+      <h2 id="h-diag">แผนผังระบบ (สเกลจริงทั้งสองแกน)</h2>
+      <p>ขากลับสะท้อนที่ BS ลงล่าง ไปยัง iris, L3 และกล้อง</p>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div class="diag-wrap"><svg id="diagram" role="img" aria-label="แผนผังทางเดินแสงของ Fizeau interferometer"></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--laser-mid)"></i>ลำแสงขาไป (ส่วนที่ผ่านรูรับแสง Ø45.7 มม.)</span>
+      <span><i style="background:var(--laser-soft)"></i>ขอบบีม 1/e² ที่ถูกตัดทิ้ง</span>
+      <span><i style="background:var(--ret-soft);border:1px solid var(--ret)"></i>ลำแสงขากลับไปกล้อง</span>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-cam">
+    <div class="card-head">
+      <h2 id="h-cam">ภาพที่กล้องและตัวเลขออกแบบ</h2>
+      <p>ภาพริ้วคำนวณแบบหลายลำสะท้อน (Airy) รวมความโคฮีเรนซ์ของเลเซอร์</p>
+    </div>
+    <div class="two">
+      <div class="cam">
+        <canvas id="cam" width="320" height="320" aria-label="ภาพริ้วการแทรกสอดจำลอง"></canvas>
+        <canvas id="profile" width="720" height="220" aria-label="กราฟความเข้มแนวกลางภาพ"></canvas>
+        <div class="btnrow">
+          <button class="btn" id="play" type="button">▶ เลื่อนเฟส (PZT)</button>
+        </div>
+        <div class="stat" id="camstat"></div>
+      </div>
+      <div class="metrics" id="metrics"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-psi">
+    <div class="card-head">
+      <h2 id="h-psi">ผลวัดแบบ phase-shifting</h2>
+      <p>ถอดเฟส → unwrap → ลบ piston/tilt → เทียบกับผิวจริงของชิ้นงาน</p>
+    </div>
+    <div class="frames" id="frames"></div>
+    <div class="maps">
+      <div class="map">
+        <h3>ผิวชิ้นงานที่วัดได้</h3>
+        <canvas id="mapMeas" width="200" height="200"></canvas>
+        <div class="cbar" id="cbar1"></div>
+        <div class="scale"><span id="s1a"></span><span>0</span><span id="s1b"></span></div>
+        <div class="stat" id="st1"></div>
+      </div>
+      <div class="map">
+        <h3>ผิวจริงของชิ้นงาน</h3>
+        <canvas id="mapTrue" width="200" height="200"></canvas>
+        <div class="cbar" id="cbar2"></div>
+        <div class="scale"><span id="s2a"></span><span>0</span><span id="s2b"></span></div>
+        <div class="stat" id="st2"></div>
+      </div>
+      <div class="map">
+        <h3>ความคลาด (วัดได้ − จริง)</h3>
+        <canvas id="mapErr" width="200" height="200"></canvas>
+        <div class="cbar" id="cbar3"></div>
+        <div class="scale"><span id="s3a"></span><span>0</span><span id="s3b"></span></div>
+        <div class="stat" id="st3"></div>
+      </div>
+    </div>
+    <p class="note">ถ้าเปิด "รวมความไม่เรียบของผิวอ้างอิง" ความคลาดส่วนใหญ่จะเป็นรูปร่างของผิว WW42012-A เอง (Fizeau วัดผลต่างระหว่างสองผิว) ลบออกได้ด้วยการสอบเทียบผิวอ้างอิง เช่น three-flat test หรือหมุนชิ้นงานแล้วเฉลี่ย</p>
+  </section>
+</main>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const LAM_NM = 632.8, LAM = 632.8e-6, CA = 45.72, N_UV = 1.457, N_BK7 = 1.515, CUBE = 25.4, TAU = Math.PI * 2;
+const WEDGE = 30 / 60 * Math.PI / 180;
+
+const SLIDERS = [
+  {g:'laser', id:'d0', label:'ขนาดบีม d₀ (1/e²)', min:0.4, max:1.2, step:0.01, v:0.8, unit:'มม.', fmt:2},
+  {g:'laser', id:'Lc', label:'ความยาวท่อเลเซอร์', min:150, max:600, step:10, v:300, unit:'มม.', fmt:0},
+  {g:'lens', id:'dz', label:'ระยะ L1–L2 คลาดจากโฟกัส Δz', min:-3, max:3, step:0.1, v:0, unit:'มม.', fmt:1},
+  {g:'lens', id:'sBS', label:'จุดโฟกัส L1 → กลาง BS', min:25, max:250, step:1, v:80, unit:'มม.', fmt:0},
+  {g:'cav', id:'gap', label:'ช่องว่างผิวอ้างอิง–ชิ้นงาน g', min:1, max:150, step:1, v:20, unit:'มม.', fmt:0},
+  {g:'cav', id:'tx', label:'เอียงชิ้นงานแกน x', min:-40, max:40, step:0.5, v:6, unit:'ริ้ว', fmt:1},
+  {g:'cav', id:'ty', label:'เอียงชิ้นงานแกน y', min:-40, max:40, step:0.5, v:0, unit:'ริ้ว', fmt:1},
+  {g:'sample', id:'att', label:'แผ่นลดทอนในช่องว่าง (T ต่อเที่ยว)', min:10, max:100, step:1, v:100, unit:'%', fmt:0},
+  {g:'sample', id:'zp', label:'ความโค้ง (power) PV', min:-300, max:300, step:5, v:60, unit:'nm', fmt:0},
+  {g:'sample', id:'za', label:'Astigmatism PV', min:-300, max:300, step:5, v:30, unit:'nm', fmt:0},
+  {g:'sample', id:'zc', label:'Coma PV', min:-300, max:300, step:5, v:0, unit:'nm', fmt:0},
+  {g:'sample', id:'zs', label:'Spherical PV', min:-300, max:300, step:5, v:0, unit:'nm', fmt:0},
+  {g:'cam', id:'npx', label:'พิกเซลคร่อมรูรับแสง', min:200, max:2000, step:10, v:1000, unit:'px', fmt:0},
+  {g:'cam', id:'sensor', label:'ขนาดภาพบนเซนเซอร์', min:2, max:12, step:0.1, v:5, unit:'มม.', fmt:1},
+  {g:'cam', id:'noise', label:'สัญญาณรบกวนกล้อง', min:0, max:10, step:0.5, v:1, unit:'%', fmt:1},
+  {g:'cam', id:'steperr', label:'ความคลาดระยะเลื่อน PZT', min:-20, max:20, step:1, v:0, unit:'%', fmt:0},
+];
+const PRESETS = {f1:[3.1, 4.51, 8, 11, 18.4], f2:[200, 250, 300, 400, 500, 750]};
+const REF_R = {ar:0.005, bare:0.0346};
+const SAMPLE_R = {glass:0.042, al:0.91, ag:0.97, si:0.35};
+const DEFAULTS = {f1:4.51, f2:400, refType:'ar', sampleType:'glass', algo:'h5', refErr:true, iris:true};
+
+// ---------- build controls ----------
+for (const c of SLIDERS) {
+  const div = document.createElement('div');
+  div.className = 'ctl';
+  div.innerHTML = `<label for="${c.id}">${c.label} <output id="${c.id}_o"></output></label>
+    <input type="range" id="${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.v}">`;
+  const grp = $('grp-' + c.g);
+  const firstSel = grp.querySelector('.ctl');
+  if (c.g === 'cam' && firstSel) grp.insertBefore(div, firstSel); else grp.appendChild(div);
+}
+for (const [id, list] of Object.entries(PRESETS)) {
+  const box = document.querySelector(`.chips[data-for="${id}"]`);
+  for (const v of list) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = v; b.dataset.v = v;
+    b.addEventListener('click', () => { $(id).value = v; update(); });
+    box.appendChild(b);
+  }
+}
+
+function readState() {
+  const s = {};
+  for (const c of SLIDERS) s[c.id] = +$(c.id).value;
+  s.f1 = Math.max(0.5, +$('f1').value || 4.51);
+  s.f2 = Math.max(50, +$('f2').value || 400);
+  s.refType = $('refType').value; s.sampleType = $('sampleType').value; s.algo = $('algo').value;
+  s.refErr = $('refErr').checked; s.iris = $('iris').checked;
+  s.sBSreq = s.sBS;
+  s.sBS = Math.min(s.sBS, s.f2 - 40);
+  return s;
+}
+function syncOutputs(s) {
+  for (const c of SLIDERS) $(c.id + '_o').textContent = (+$(c.id).value).toFixed(c.fmt) + ' ' + c.unit;
+  $('f1_o').textContent = s.f1 + ' มม.'; $('f2_o').textContent = s.f2 + ' มม.';
+  for (const id of ['f1', 'f2'])
+    document.querySelectorAll(`.chips[data-for="${id}"] .chip`).forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === s[id])));
+}
+
+// ---------- optics ----------
+function cavity(R1, R2, phi) { // reflected intensity of a two-surface cavity, multiple beams
+  const r1 = Math.sqrt(R1), r2 = Math.sqrt(R2), k = (1 - R1) * r2, c = Math.cos(phi), sn = Math.sin(phi);
+  const dre = 1 + r1 * r2 * c, dim = r1 * r2 * sn, dd = dre * dre + dim * dim;
+  const nre = k * c, nim = k * sn;
+  const qre = (nre * dre + nim * dim) / dd, qim = (nim * dre - nre * dim) / dd;
+  const er = r1 + qre, ei = qim;
+  return er * er + ei * ei;
+}
+function compute(s) {
+  const d = {};
+  d.M = s.f2 / s.f1; d.D = s.d0 * d.M; d.w = d.D / 2;
+  d.edge = Math.exp(-2 * (CA / 2) ** 2 / d.w ** 2);
+  d.powerIn = 1 - d.edge;
+  d.waist = 2 * LAM * s.f1 / (Math.PI * s.d0 / 2) * 1000;          // µm, 1/e² diameter at focus
+  d.pinIdeal = LAM * s.f1 / (s.d0 / 2) * 1000;                     // µm
+  d.pin = [5, 10, 15, 20, 25, 30, 40, 50].find(p => p >= d.pinIdeal * 0.9) || 50;
+  d.NA = (CA / 2) / s.f2;
+  d.beamBS = 2 * s.sBS * d.NA;
+  d.shift = CUBE * (1 - 1 / N_BK7);
+  d.L12 = s.f1 + s.f2 + d.shift + s.dz;
+  d.saWaves = CUBE * (N_BK7 ** 2 - 1) / (8 * N_BK7 ** 3) * d.NA ** 4 / LAM;
+  d.ghost = s.f2 * 2 * N_UV * WEDGE;
+  d.ghostMin = d.ghost * 20 / 30;
+  d.Rref = REF_R[s.refType]; d.Rs = SAMPLE_R[s.sampleType] * (s.att / 100) ** 2;
+  d.Rfront = s.refType === 'ar' ? 0.005 : 0.0346;
+  d.gamma = Math.abs(Math.cos(Math.PI * s.gap / s.Lc));
+  d.Iinc = d.Rref + (1 - d.Rref) ** 2 * d.Rs / (1 - d.Rref * d.Rs);
+  d.bg = s.iris ? 0 : d.Rfront;
+  let mx = 0, mn = 1e9;
+  for (let i = 0; i < 256; i++) {
+    const I = d.gamma * cavity(d.Rref, d.Rs, i / 256 * TAU) + (1 - d.gamma) * d.Iinc + d.bg;
+    mx = Math.max(mx, I); mn = Math.min(mn, I);
+  }
+  d.Imax = mx; d.Imin = mn; d.V = (mx - mn) / (mx + mn);
+  const R2t = (1 - d.Rref) ** 2 * d.Rs; d.V2 = 2 * Math.sqrt(d.Rref * R2t) / (d.Rref + R2t);
+  d.Nfr = Math.hypot(s.tx, s.ty);
+  d.tilt = d.Nfr * LAM / (2 * CA) * 1e6; // µrad
+  d.ppf = d.Nfr > 0 ? s.npx / d.Nfr : Infinity;
+  d.f3 = s.f2 * s.sensor / CA;
+  const a = 30 + 12 * (1 / N_UV) + s.gap;                // L2 → sample, reduced distance
+  const v1 = a * s.f2 / (a - s.f2);
+  const u3 = s.f2 + d.f3 - v1;
+  d.v3 = u3 * d.f3 / (u3 - d.f3);
+  d.mag = (v1 / a) * (d.v3 / u3);
+  d.R = s.dz !== 0 ? s.f2 ** 2 / Math.abs(s.dz) : Infinity;
+  d.collErr = isFinite(d.R) ? s.gap * (CA / 2) ** 2 / d.R ** 2 * 1e6 : 0; // nm
+  d.pzt = LAM_NM / 8;
+  d.toCam = 0.25 * d.powerIn * (d.Imax + d.Imin) / 2;
+  return d;
+}
+
+// ---------- surfaces ----------
+function hSample(x, y, s) {
+  const r2 = x * x + y * y;
+  return s.zp * (r2 - 0.5) + s.za * (x * x - y * y) / 2 + s.zc * (3 * r2 - 2) * x / 2 + s.zs * (6 * r2 * r2 - 6 * r2 + 1) / 1.5;
+}
+const refShape = (x, y) => 0.65 * (x * x + y * y - 0.5) + 0.35 * (x * x - y * y) / 2 + 0.12 * (3 * (x * x + y * y) - 2) * y;
+const REF_SCALE = (() => { let mn = 1e9, mx = -1e9;
+  for (let j = 0; j < 101; j++) for (let i = 0; i < 101; i++) { const x = i / 50 - 1, y = j / 50 - 1; if (x * x + y * y > 1) continue; const v = refShape(x, y); mn = Math.min(mn, v); mx = Math.max(mx, v); }
+  return (LAM_NM / 10) / (mx - mn); })();
+const hRef = (x, y, s) => s.refErr ? REF_SCALE * refShape(x, y) : 0;
+
+function buildGrid(n, s, d) {
+  const opd = new Float32Array(n * n), env = new Float32Array(n * n), mask = new Uint8Array(n * n);
+  const hs = new Float32Array(n * n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const x = (i + 0.5) / n * 2 - 1, y = 1 - (j + 0.5) / n * 2, k = j * n + i;
+    const r2 = x * x + y * y;
+    if (r2 > 1) continue;
+    mask[k] = 1;
+    hs[k] = hSample(x, y, s);
+    opd[k] = 2 * (hs[k] - hRef(x, y, s)) + s.tx * LAM_NM * x / 2 + s.ty * LAM_NM * y / 2;
+    env[k] = Math.exp(-2 * r2 * (CA / 2) ** 2 / d.w ** 2);
+  }
+  return {n, opd, env, mask, hs};
+}
+let gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); };
+function frame(G, s, d, delta, out) {
+  const phi0 = TAU * ((2 * s.gap * 1e6) % LAM_NM) / LAM_NM;
+  const scale = 0.95 / d.Imax, nz = s.noise / 100;
+  for (let k = 0; k < G.n * G.n; k++) {
+    if (!G.mask[k]) { out[k] = 0; continue; }
+    const phi = TAU * G.opd[k] / LAM_NM + phi0 + delta;
+    let I = G.env[k] * (d.gamma * cavity(d.Rref, d.Rs, phi) + (1 - d.gamma) * d.Iinc + d.bg) * scale;
+    if (nz) I += nz * gauss();
+    out[k] = Math.max(0, Math.min(255, Math.round(I * 255)));
+  }
+  return out;
+}
+
+// ---------- colors ----------
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hex(c) { const m = c.replace('#', ''); return [0, 2, 4].map(i => parseInt(m.substr(i, 2), 16)); }
+function divergent(t, P) { const a = t < 0 ? P.neg : P.pos, u = Math.min(1, Math.abs(t)); return P.mid.map((m, i) => Math.round(m + (a[i] - m) * u)); }
+function palette() { return {neg: hex(css('--map-neg')), mid: hex(css('--map-mid')), pos: hex(css('--map-pos'))}; }
+
+// ---------- camera ----------
+const camCtx = $('cam').getContext('2d');
+let camGrid = null, camBuf = null, phase = 0, playing = false, S = null, Dd = null;
+function drawCam() {
+  const n = camGrid.n; frame(camGrid, S, Dd, phase, camBuf);
+  const img = camCtx.createImageData(n, n);
+  for (let k = 0; k < n * n; k++) { const v = camBuf[k]; img.data[4 * k] = v; img.data[4 * k + 1] = v; img.data[4 * k + 2] = v; img.data[4 * k + 3] = 255; }
+  camCtx.putImageData(img, 0, 0);
+  drawProfile();
+}
+function drawProfile() {
+  const cv = $('profile'), c = cv.getContext('2d'), W = cv.width, H = cv.height, n = camGrid.n, row = n >> 1;
+  c.clearRect(0, 0, W, H);
+  const pad = 14, ink = css('--muted'), las = css('--laser'), line = css('--line');
+  c.strokeStyle = line; c.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) { const y = pad + (H - 2 * pad) * g / 4; c.beginPath(); c.moveTo(pad, y); c.lineTo(W - pad, y); c.stroke(); }
+  c.strokeStyle = ink; c.setLineDash([6, 5]); c.beginPath();
+  for (let i = 0; i < n; i++) { const k = row * n + i; if (!camGrid.mask[k]) continue; const x = pad + (W - 2 * pad) * i / (n - 1); const y = H - pad - (H - 2 * pad) * camGrid.env[k] * 0.95; c.lineTo(x, y); }
+  c.stroke(); c.setLineDash([]);
+  c.strokeStyle = las; c.lineWidth = 2.5; c.beginPath(); let started = false;
+  for (let i = 0; i < n; i++) { const k = row * n + i; if (!camGrid.mask[k]) continue; const x = pad + (W - 2 * pad) * i / (n - 1); const y = H - pad - (H - 2 * pad) * camBuf[k] / 255; if (!started) { c.moveTo(x, y); started = true; } else c.lineTo(x, y); }
+  c.stroke();
+  c.fillStyle = ink; c.font = '22px ' + css('--f-mono'); c.fillText('ความเข้มแนวกลางภาพ · เส้นประ = ขอบเขตเกาส์เซียน', pad + 4, pad + 20);
+}
+
+// ---------- PSI ----------
+const NP = 200;
+function unwrap(ph, mask, n) {
+  const out = new Float32Array(n * n), done = new Uint8Array(n * n), c = n >> 1;
+  const w = a => a - TAU * Math.round(a / TAU);
+  const k0 = c * n + c; out[k0] = ph[k0]; done[k0] = 1;
+  for (const dir of [1, -1]) { let prev = k0; for (let j = c + dir; j >= 0 && j < n; j += dir) { const k = j * n + c; if (!mask[k]) break; out[k] = out[prev] + w(ph[k] - ph[prev]); done[k] = 1; prev = k; } }
+  for (let j = 0; j < n; j++) { const ks = j * n + c; if (!done[ks]) continue;
+    for (const dir of [1, -1]) { let prev = ks; for (let i = c + dir; i >= 0 && i < n; i += dir) { const k = j * n + i; if (!mask[k]) break; out[k] = out[prev] + w(ph[k] - ph[prev]); done[k] = 1; prev = k; } } }
+  return {out, done};
+}
+function removePlane(z, m, n) {
+  let S0 = 0, Sx = 0, Sy = 0, Sxx = 0, Sxy = 0, Syy = 0, Sz = 0, Sxz = 0, Syz = 0;
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const k = j * n + i; if (!m[k]) continue; const x = i / n, y = j / n, v = z[k];
+    S0++; Sx += x; Sy += y; Sxx += x * x; Sxy += x * y; Syy += y * y; Sz += v; Sxz += x * v; Syz += y * v; }
+  const A = [[S0, Sx, Sy], [Sx, Sxx, Sxy], [Sy, Sxy, Syy]], b = [Sz, Sxz, Syz];
+  const det = M => M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
+  const D0 = det(A), co = [0, 1, 2].map(c => det(A.map((r, ri) => r.map((v, ci) => ci === c ? b[ri] : v))) / D0);
+  const o = new Float32Array(n * n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const k = j * n + i; if (m[k]) o[k] = z[k] - (co[0] + co[1] * i / n + co[2] * j / n); }
+  return o;
+}
+function stats(z, m) { let mn = 1e9, mx = -1e9, s = 0, s2 = 0, c = 0;
+  for (let k = 0; k < z.length; k++) { if (!m[k]) continue; const v = z[k]; mn = Math.min(mn, v); mx = Math.max(mx, v); s += v; c++; }
+  const mean = s / c; for (let k = 0; k < z.length; k++) if (m[k]) s2 += (z[k] - mean) ** 2;
+  return {pv: mx - mn, rms: Math.sqrt(s2 / c), mean, amax: Math.max(Math.abs(mx - mean), Math.abs(mn - mean))}; }
+function drawMap(id, z, m, n, st, P, scaleIds, cbarId) {
+  const c = $(id).getContext('2d'), img = c.createImageData(n, n), lim = st.amax || 1, bgc = hex(css('--panel2'));
+  for (let k = 0; k < n * n; k++) { const rgb = m[k] ? divergent((z[k] - st.mean) / lim, P) : bgc; img.data.set([rgb[0], rgb[1], rgb[2], 255], 4 * k); }
+  c.putImageData(img, 0, 0);
+  $(scaleIds[0]).textContent = '−' + lim.toFixed(1) + ' nm'; $(scaleIds[1]).textContent = '+' + lim.toFixed(1) + ' nm';
+  $(cbarId).style.background = `linear-gradient(90deg, rgb(${P.neg}), rgb(${P.mid}), rgb(${P.pos}))`;
+}
+function runPSI(s, d) {
+  const G = buildGrid(NP, s, d), n = NP;
+  const base = s.algo === 'h5' ? [-Math.PI, -Math.PI / 2, 0, Math.PI / 2, Math.PI] : [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2];
+  const deltas = base.map(b => b * (1 + s.steperr / 100));
+  const F = deltas.map(dl => frame(G, s, d, dl, new Float32Array(n * n)));
+  const fr = $('frames'); fr.innerHTML = '';
+  F.forEach((f, idx) => {
+    const fig = document.createElement('figure'), cv = document.createElement('canvas'); cv.width = n; cv.height = n;
+    const c = cv.getContext('2d'), img = c.createImageData(n, n);
+    for (let k = 0; k < n * n; k++) img.data.set([f[k], f[k], f[k], 255], 4 * k);
+    c.putImageData(img, 0, 0);
+    const deg = Math.round(base[idx] * 180 / Math.PI);
+    fig.append(cv); const cap = document.createElement('figcaption'); cap.textContent = `δ = ${deg}°`; fig.append(cap); fr.append(fig);
+  });
+  const ph = new Float32Array(n * n), m = new Uint8Array(n * n);
+  for (let k = 0; k < n * n; k++) {
+    if (!G.mask[k]) continue;
+    let num, den;
+    if (s.algo === 'h5') { num = 2 * (F[1][k] - F[3][k]); den = 2 * F[2][k] - F[0][k] - F[4][k]; }
+    else { num = F[3][k] - F[1][k]; den = F[0][k] - F[2][k]; }
+    if (Math.hypot(num, den) < 2) continue; // too little modulation
+    ph[k] = Math.atan2(num, den); m[k] = 1;
+  }
+  // keep only disk interior to avoid edge pixels
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const x = (i + 0.5) / n * 2 - 1, y = 1 - (j + 0.5) / n * 2; if (x * x + y * y > 0.97) m[j * n + i] = 0; }
+  const U = unwrap(ph, m, n);
+  const hm = new Float32Array(n * n); for (let k = 0; k < n * n; k++) hm[k] = U.out[k] * LAM_NM / (2 * TAU);
+  const mm = U.done;
+  const meas = removePlane(hm, mm, n), tru = removePlane(G.hs, mm, n);
+  const err = new Float32Array(n * n); for (let k = 0; k < n * n; k++) if (mm[k]) err[k] = meas[k] - tru[k];
+  const P = palette(), s1 = stats(meas, mm), s2 = stats(tru, mm), s3 = stats(err, mm);
+  const lim = Math.max(s1.amax, s2.amax);
+  drawMap('mapMeas', meas, mm, n, {...s1, amax: lim}, P, ['s1a', 's1b'], 'cbar1');
+  drawMap('mapTrue', tru, mm, n, {...s2, amax: lim}, P, ['s2a', 's2b'], 'cbar2');
+  drawMap('mapErr', err, mm, n, s3, P, ['s3a', 's3b'], 'cbar3');
+  const fmt = st => `PV ${st.pv.toFixed(1)} nm (λ/${(LAM_NM / st.pv).toFixed(0)}) · RMS ${st.rms.toFixed(1)} nm`;
+  $('st1').textContent = fmt(s1); $('st2').textContent = fmt(s2); $('st3').textContent = fmt(s3);
+}
+
+// ---------- metrics ----------
+function metrics(s, d) {
+  const rows = [];
+  const add = (k, note, v, st, tag) => rows.push(`<div class="m"><div class="k">${k}<small>${note}</small></div><div class="v">${v}</div><span class="pill ${st}">${tag}</span></div>`);
+  const edgeSt = d.edge >= 0.4 ? 'ok' : d.edge >= 0.2 ? 'warn' : 'bad';
+  add('ความเข้มที่ขอบรูรับแสง', 'เทียบกับกลางภาพ ควร ≥ 40% เพื่อให้ริ้วสว่างทั่วภาพ', (d.edge * 100).toFixed(0) + '%', edgeSt, {ok:'ดี', warn:'พอใช้', bad:'มืดขอบ'}[edgeSt]);
+  add('แสงที่ผ่านรูรับแสง Ø45.7', 'ส่วนที่เหลือถูกขอบ L2 ตัดทิ้ง', (d.powerIn * 100).toFixed(0) + '%', 'info', 'ข้อมูล');
+  add('จุดโฟกัสหลัง L1 (1/e²)', `pinhole ที่เหมาะ ≈ λf1/r = ${d.pinIdeal.toFixed(1)} µm`, d.waist.toFixed(1) + ' µm', 'info', `ใช้ ${d.pin} µm`);
+  const bsSt = d.beamBS <= 18 ? 'ok' : d.beamBS <= 22 ? 'warn' : 'bad';
+  add('ขนาดลำแสงที่ BS', `NA = ${d.NA.toFixed(3)}; cube 1″ รับได้ราว 20 มม.${s.sBSreq > s.sBS ? ' (ระยะถูกจำกัดให้ห่าง L2 ≥ 40 มม.)' : ''}`, d.beamBS.toFixed(1) + ' มม.', bsSt, {ok:'ผ่าน', warn:'คับ', bad:'ล้น cube'}[bsSt]);
+  add('ระยะ L1 → L2 จริง', `f1 + f2 + ${d.shift.toFixed(1)} มม. (แก้ว cube ทำให้โฟกัสเลื่อน)`, d.L12.toFixed(1) + ' มม.', 'info', 'ตั้งค่า');
+  add('Spherical aberration จาก cube', 'อยู่ในทางแสงร่วม (common path) ทั้งสองลำ จึงหักล้างกันเกือบหมด', (d.saWaves).toFixed(3) + ' λ', d.saWaves < 0.25 ? 'ok' : 'warn', d.saWaves < 0.25 ? 'เล็ก' : 'สังเกต');
+  const gSt = d.ghostMin >= 3 ? 'ok' : 'warn';
+  add('ระยะแยกภาพสะท้อนผิวหน้า WW', `ที่ระนาบ iris (มุมลิ่ม 20′–40′ → ${d.ghostMin.toFixed(1)}–${(d.ghost * 4 / 3).toFixed(1)} มม.)`, d.ghost.toFixed(1) + ' มม.', gSt, gSt === 'ok' ? 'บังง่าย' : 'ใกล้');
+  const vSt = d.V >= 0.5 ? 'ok' : d.V >= 0.2 ? 'warn' : 'bad';
+  add('ความคมชัดริ้ว (visibility)', `R อ้างอิง ${(d.Rref * 100).toFixed(1)}% · R ชิ้นงาน${s.att < 100 ? ' (หลังแผ่นลดทอน)' : ''} ${(d.Rs * 100).toFixed(1)}% · คิดแบบหลายลำสะท้อน (สูตรสองลำให้ ${d.V2.toFixed(2)})${s.iris ? '' : ' · มีแสงรบกวนจากผิวหน้า'}`, d.V.toFixed(2), vSt, {ok:'ดี', warn:'ต่ำ', bad:'ต่ำมาก'}[vSt]);
+  const cSt = d.gamma >= 0.9 ? 'ok' : d.gamma >= 0.6 ? 'warn' : 'bad';
+  add('ปัจจัยความโคฮีเรนซ์ γ', `OPD = 2g = ${(2 * s.gap)} มม. เทียบความยาวท่อ ${s.Lc} มม. (แบบ 2 โหมด)`, d.gamma.toFixed(2), cSt, {ok:'ดี', warn:'ลดลง', bad:'ริ้วหาย'}[cSt]);
+  const pSt = d.ppf >= 6 ? 'ok' : d.ppf >= 3 ? 'warn' : 'bad';
+  add('พิกเซลต่อริ้ว', `${d.Nfr.toFixed(1)} ริ้ว = เอียง ${d.tilt.toFixed(0)} µrad (≥ 3 px ต่อริ้วตาม Nyquist)`, isFinite(d.ppf) ? d.ppf.toFixed(0) + ' px' : '∞', pSt, {ok:'พอ', warn:'เสี่ยง', bad:'aliasing'}[pSt]);
+  add('ความคลาดจากการ collimate ไม่ตรง', isFinite(d.R) ? `รัศมีหน้าคลื่น ≈ ${(d.R / 1000).toFixed(0)} ม.` : 'Δz = 0 ลำแสงขนานสมบูรณ์', d.collErr < 0.01 ? '< 0.01 nm' : d.collErr.toFixed(2) + ' nm', d.collErr < 1 ? 'ok' : 'warn', d.collErr < 1 ? 'ละเลยได้' : 'สังเกต');
+  add('เลนส์ถ่ายภาพ L3', `กำลังขยายภาพ ${Math.abs(d.mag).toFixed(3)}× · ระยะ L3 → เซนเซอร์ ${d.v3.toFixed(1)} มม.`, d.f3.toFixed(0) + ' มม.', 'info', 'แนะนำ');
+  add('ระยะเลื่อน PZT ต่อขั้น', 'เลื่อน λ/8 ได้เฟสเปลี่ยน 90° (แสงเดินไป-กลับ)', d.pzt.toFixed(1) + ' nm', 'info', 'ข้อมูล');
+  add('แสงถึงกล้อง (ประมาณ)', 'สัดส่วนของกำลังเลเซอร์ หลังผ่าน BS สองครั้ง', (d.toCam * 100).toFixed(2) + '%', 'info', 'ข้อมูล');
+  $('metrics').innerHTML = rows.join('');
+  $('summary').innerHTML = [
+    ['L1', s.f1 + ' มม.'], ['L2', s.f2 + ' มม.'], ['อัตราขยาย', d.M.toFixed(1) + '×'], ['บีมหลังขยาย (1/e²)', d.D.toFixed(1) + ' มม.'], ['pinhole', d.pin + ' µm'], ['visibility', d.V.toFixed(2)]
+  ].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  $('camstat').textContent = `${d.Nfr.toFixed(1)} ริ้ว · V = ${d.V.toFixed(2)} · ภาพคร่อม Ø45.7 มม.`;
+}
+
+// ---------- diagram ----------
+function drawDiagram(s, d) {
+  const svg = $('diagram');
+  const zF = s.f1, zBS = zF + s.sBS, zL2 = d.L12, zWWf = zL2 + 30, zWWb = zWWf + 12, zS = zWWb + s.gap, zSe = zS + 14;
+  const R = CA / 2, RL = 25.4, hD = d.D / 2;
+  const yIris = s.sBS, yL3 = yIris + d.f3, yCam = yL3 + d.v3;
+  const left = -205, right = zSe + 130, top = -Math.max(RL, Math.min(hD, 60)) - 52, bottom = Math.max(yCam + 40, 60);
+  const W = right - left, H = bottom - top;
+  svg.setAttribute('viewBox', `${left} ${top} ${W} ${H}`);
+  const px = svg.getBoundingClientRect().width || 900, k = W / px, fs = 11.5 * k, fsS = 10.5 * k;
+  const ns = 'vector-effect="non-scaling-stroke"';
+  const T = (x, y, t, o = {}) => `<text x="${x}" y="${y}" font-size="${o.s || fs}" fill="${o.c || 'var(--ink)'}" text-anchor="${o.a || 'middle'}" font-family="${o.mono ? 'var(--f-mono)' : 'var(--f-body)'}" ${o.w ? `font-weight="${o.w}"` : ''}>${t}</text>`;
+  const lensV = (z, h, t) => `<path d="M${z},${-h} Q${z + t},0 ${z},${h} Q${z - t},0 ${z},${-h}Z" fill="var(--glass)" fill-opacity=".7" stroke="var(--glass-edge)" stroke-width="1.2" ${ns}/>`;
+  const lensH = (x, y, h, t) => `<path d="M${x - h},${y} Q${x},${y + t} ${x + h},${y} Q${x},${y - t} ${x - h},${y}Z" fill="var(--glass)" fill-opacity=".7" stroke="var(--glass-edge)" stroke-width="1.2" ${ns}/>`;
+  const dim = (x1, x2, y, label) => `<g stroke="var(--muted)" stroke-width="1" ${ns}><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" ${ns}/><line x1="${x1}" y1="${y - 4 * k}" x2="${x1}" y2="${y + 4 * k}" ${ns}/><line x1="${x2}" y1="${y - 4 * k}" x2="${x2}" y2="${y + 4 * k}" ${ns}/></g>` + T((x1 + x2) / 2, y - 5 * k, label, {s: fsS, c: 'var(--muted)', mono: true});
+  let g = '';
+  // axis
+  g += `<line x1="${left + 10}" y1="0" x2="${right - 10}" y2="0" stroke="var(--muted)" stroke-dasharray="4 4" stroke-width=".8" ${ns} opacity=".6"/>`;
+  // forward beam
+  const hfaint = Math.min(hD, RL + 4);
+  g += `<polygon points="${zF},0 ${zL2},${-hfaint} ${zL2},${hfaint}" fill="var(--laser-soft)"/>`;
+  g += `<polygon points="${zF},0 ${zL2},${-R} ${zL2},${R}" fill="var(--laser-mid)"/>`;
+  g += `<rect x="${zL2}" y="${-R}" width="${zS - zL2}" height="${2 * R}" fill="var(--laser-mid)"/>`;
+  g += `<polygon points="0,${-s.d0 / 2} ${zF},0 0,${s.d0 / 2}" fill="var(--laser)"/>`;
+  g += `<line x1="-25" y1="0" x2="0" y2="0" stroke="var(--laser)" stroke-width="2" ${ns}/>`;
+  // return arm
+  const wBS = d.beamBS / 2, wL3 = d.f3 * d.NA;
+  g += `<polygon points="${zBS - wBS},0 ${zBS + wBS},0 ${zBS},${yIris}" fill="var(--ret-soft)" stroke="var(--ret)" stroke-width=".8" ${ns}/>`;
+  g += `<polygon points="${zBS},${yIris} ${zBS - wL3},${yL3} ${zBS - wL3},${yCam} ${zBS + wL3},${yCam} ${zBS + wL3},${yL3}" fill="var(--ret-soft)" stroke="var(--ret)" stroke-width=".8" ${ns}/>`;
+  // ghost from WW front face
+  const gx = zBS + d.ghost, ghostPass = !s.iris;
+  g += `<line x1="${zBS}" y1="0" x2="${gx}" y2="${yIris}" stroke="var(--${ghostPass ? 'bad' : 'muted'})" stroke-dasharray="3 3" stroke-width="1" ${ns}/>`;
+  g += `<circle cx="${gx}" cy="${yIris}" r="${2.2 * k}" fill="var(--${ghostPass ? 'bad' : 'muted'})"/>`;
+  g += T(gx + 6 * k, yIris + 14 * k, `ภาพสะท้อนผิวหน้า WW (ห่าง ${d.ghost.toFixed(1)} มม.)${ghostPass ? ' — ผ่านเข้ากล้อง' : ''}`, {s: fsS, a: 'start', c: `var(--${ghostPass ? 'bad' : 'muted'})`});
+  // laser
+  g += `<rect x="-195" y="-15" width="170" height="30" rx="4" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.2" ${ns}/>`;
+  g += T(-110, 4 * k, 'HeNe 632.8 nm', {w: 600});
+  g += T(-110, 15 + 14 * k, `d₀ = ${s.d0.toFixed(2)} มม.`, {s: fsS, c: 'var(--muted)', mono: true});
+  // L1 + pinhole
+  g += lensV(0, 3.5, 1.6);
+  g += T(0, -16, 'L1', {w: 600});
+  g += T(0, -16 + fs * 1.05, `f ${s.f1}`, {s: fsS, mono: true, c: 'var(--muted)'});
+  g += `<line x1="${zF}" y1="-7" x2="${zF}" y2="-0.6" stroke="var(--ink)" stroke-width="2.2" ${ns}/><line x1="${zF}" y1="0.6" x2="${zF}" y2="7" stroke="var(--ink)" stroke-width="2.2" ${ns}/>`;
+  g += T(zF + 4, 22, `pinhole ${d.pin} µm`, {s: fsS, a: 'start', c: 'var(--muted)'});
+  // BS cube
+  const c2 = CUBE / 2;
+  g += `<rect x="${zBS - c2}" y="${-c2}" width="${CUBE}" height="${CUBE}" fill="var(--glass)" fill-opacity=".35" stroke="var(--glass-edge)" stroke-width="1.2" ${ns}/>`;
+  g += `<line x1="${zBS - c2}" y1="${c2}" x2="${zBS + c2}" y2="${-c2}" stroke="var(--glass-edge)" stroke-width="1.4" ${ns}/>`;
+  g += T(zBS, -c2 - 6 * k, 'BS 50:50', {w: 600});
+  // L2
+  g += lensV(zL2, RL, 7);
+  g += `<rect x="${zL2 - 4}" y="${-RL - 6}" width="8" height="6" fill="var(--metal)"/><rect x="${zL2 - 4}" y="${RL}" width="8" height="6" fill="var(--metal)"/>`;
+  // WW42012-A wedge
+  g += `<polygon points="${zWWf - 0.9},${-RL} ${zWWf + 0.9},${RL} ${zWWb},${RL} ${zWWb},${-RL}" fill="var(--glass)" fill-opacity=".55" stroke="var(--glass-edge)" stroke-width="1.2" ${ns}/>`;
+  g += `<line x1="${zWWb}" y1="${-RL}" x2="${zWWb}" y2="${RL}" stroke="var(--laser)" stroke-width="2.2" ${ns}/>`;
+  g += `<rect x="${zWWf}" y="${-RL - 9}" width="12" height="7" fill="var(--metal)"/>`;
+  // sample
+  g += `<rect x="${zS}" y="-28" width="14" height="56" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.2" ${ns}/>`;
+  g += `<line x1="${zS}" y1="-28" x2="${zS}" y2="28" stroke="var(--ret)" stroke-width="2.2" ${ns}/>`;
+  // labels above
+  const yLab = top + 16 * k;
+  g += T(zL2 - 8, yLab, 'L2', {w: 600, a: 'end'}) + T(zL2 - 8, yLab + fs * 1.1, `f ${s.f2}`, {s: fsS, mono: true, c: 'var(--muted)', a: 'end'});
+  g += T(zWWf - 2, yLab, 'WW42012-A', {w: 600, a: 'start'}) + T(zWWf - 2, yLab + fs * 1.1, `PZT · ผิวอ้างอิงด้านหลัง`, {s: fsS, c: 'var(--muted)', a: 'start'});
+  g += T(zS + 7, 28 + 14 * k, 'ชิ้นงาน', {w: 600});
+  // dimensions
+  const yd = -RL - 22;
+  g += dim(zF, zL2, yd, `f2 + ${d.shift.toFixed(1)} (cube) = ${(s.f2 + d.shift).toFixed(1)} มม.`);
+  g += dim(zWWb, zS, -RL - 14 - 8 * k, `g ${s.gap}`);
+  g += dim(0, zL2, RL + 18, `L1 → L2 = ${d.L12.toFixed(1)} มม.`);
+  // iris
+  const op = s.iris ? 1.6 : 16;
+  g += `<line x1="${zBS - 22}" y1="${yIris}" x2="${zBS - op}" y2="${yIris}" stroke="var(--ink)" stroke-width="3" ${ns}/><line x1="${zBS + op}" y1="${yIris}" x2="${zBS + Math.max(22, d.ghost + 6)}" y2="${yIris}" stroke="var(--ink)" stroke-width="3" ${ns}/>`;
+  g += T(zBS - 26, yIris + 4 * k, s.iris ? 'iris' : 'iris (เปิดกว้าง)', {a: 'end', s: fsS});
+  // L3 + camera
+  g += lensH(zBS, yL3, Math.max(wL3 + 3, 8), 3.5);
+  g += T(zBS - Math.max(wL3 + 3, 8) - 5 * k, yL3 + 4 * k, `L3 f ${d.f3.toFixed(0)}`, {a: 'end', s: fsS, mono: true});
+  g += `<rect x="${zBS - Math.max(s.sensor, 8)}" y="${yCam}" width="${2 * Math.max(s.sensor, 8)}" height="12" fill="var(--ink)"/>`;
+  g += T(zBS + Math.max(s.sensor, 8) + 5 * k, yCam + 9, 'กล้อง', {a: 'start', w: 600});
+  // scale bar
+  const sbx = left + 12, sby = bottom - 14;
+  g += `<line x1="${sbx}" y1="${sby}" x2="${sbx + 100}" y2="${sby}" stroke="var(--ink)" stroke-width="2" ${ns}/>` + T(sbx + 50, sby - 5 * k, '100 มม.', {s: fsS, mono: true});
+  svg.innerHTML = g;
+}
+
+// ---------- main ----------
+let raf = 0;
+function update() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
+function render() {
+  S = readState(); syncOutputs(S); Dd = compute(S);
+  metrics(S, Dd); drawDiagram(S, Dd);
+  camGrid = buildGrid(320, S, Dd); camBuf = new Float32Array(320 * 320);
+  drawCam(); runPSI(S, Dd);
+}
+document.querySelectorAll('aside input, aside select').forEach(el => el.addEventListener('input', update));
+$('reset').addEventListener('click', () => {
+  for (const c of SLIDERS) $(c.id).value = c.v;
+  $('f1').value = DEFAULTS.f1; $('f2').value = DEFAULTS.f2; $('refType').value = DEFAULTS.refType; $('sampleType').value = DEFAULTS.sampleType;
+  $('algo').value = DEFAULTS.algo; $('refErr').checked = DEFAULTS.refErr; $('iris').checked = DEFAULTS.iris; update();
+});
+let last = 0;
+function tick(t) { if (!playing) return; if (t - last > 33) { phase = (phase + 0.12) % TAU; drawCam(); last = t; } requestAnimationFrame(tick); }
+$('play').addEventListener('click', () => { playing = !playing; $('play').textContent = playing ? '❚❚ หยุด' : '▶ เลื่อนเฟส (PZT)'; if (playing) requestAnimationFrame(tick); });
+addEventListener('resize', () => { if (S) drawDiagram(S, Dd); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', update);
+new MutationObserver(update).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+render();
+})();
+</script>
