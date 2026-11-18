@@ -38,6 +38,9 @@ h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute
 .mono,output,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:14px}
 header.top p{margin:0;color:var(--muted);max-width:70ch}
+header.top .links{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;width:100%}
+header.top .links a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+header.top .links a:hover{text-decoration-color:currentColor}
 .layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:920px){.layout{grid-template-columns:minmax(0,1fr)}}
 aside.controls{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:16px;
@@ -100,6 +103,7 @@ button.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line
 <header class="top">
   <h1>Fizeau Bench 2″</h1>
   <p>จำลองระบบ เลเซอร์ HeNe → L1 + pinhole → BS → L2 → WW42012-A → ชิ้นงาน ปรับค่าทางซ้ายแล้วดูแผนผังที่วาดตามสเกลจริง ภาพริ้วที่กล้อง และผลวัดแบบ phase-shifting</p>
+  <nav class="links"><a href="https://saetiew.github.io/fizeau-simulator/" target="_blank" rel="noopener">เปิดบนเว็บ ↗</a><a href="https://github.com/saetiew/fizeau-simulator" target="_blank" rel="noopener">ซอร์สโค้ดบน GitHub ↗</a></nav>
 </header>
 
 <div class="layout">

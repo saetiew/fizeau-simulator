@@ -1,6 +1,9 @@
 # Fizeau Bench 2″ — Simulator
 
-Interactive browser simulator for a 2-inch Fizeau interferometer used to test flat optics.
+**Live demo:** https://saetiew.github.io/fizeau-simulator/
+**Source:** [`index.html`](index.html) (a single file with no build step)
+
+This is an interactive browser simulator for a 2-inch Fizeau interferometer that tests flat optics.
 
 Optical layout: HeNe 632.8 nm → L1 (asphere) + pinhole → beamsplitter → L2 (Ø2″ collimator) → reference flat (Thorlabs WW42012-A) → sample.
 
@@ -10,4 +13,6 @@ Optical layout: HeNe 632.8 nm → L1 (asphere) + pinhole → beamsplitter → L2
 - Simulated camera fringes using a multiple-beam (Airy) cavity model
 - Phase-shifting interferometry with Hariharan 5-step or 4-step algorithms, plus phase-error maps
 
-Open `index.html` in any browser. It needs no installation and has no build step.
+## Run locally
+
+Download `index.html` and open it in any browser. It needs no installation.
